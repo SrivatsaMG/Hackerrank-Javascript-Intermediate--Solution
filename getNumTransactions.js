@@ -1,7 +1,7 @@
 'use strict';
 
 const fs = require('fs');
-const https = require('https');
+const axios = require('axios');
 
 process.stdin.resume();
 process.stdin.setEncoding('utf-8');
@@ -9,89 +9,46 @@ process.stdin.setEncoding('utf-8');
 let inputString = '';
 let currentLine = 0;
 
-process.stdin.on('data', function(inputStdin) {
-      inputString += inputStdin;
+process.stdin.on('data', function (inputStdin) {
+    inputString += inputStdin;
 });
 
-process.stdin.on('end', function() {
+process.stdin.on('end', function () {
     inputString = inputString.split('\n');
     main();
 });
 
 function readLine() {
-      return inputString[currentLine++];
+    return inputString[currentLine++];
 }
-
-const axios =  require('axios');
 
 async function getNumTransactions(username) {
-    // write your code here
-    // API endpoint: https://jsonmock.hackerrank.com/api/article_users?username=<username>
-    // API endpoint: https://jsonmock.hackerrank.com/api/transactions?&userId=<userId>
     try {
-        const {data} = await axios.get(`https://jsonmock.hackerrank.com/api/article_users?username=${username}`);
-        if(data.data && data.data.length !==0){
-            const userID = data.data[0].id;
-            const response = await axios.get(`https://jsonmock.hackerrank.com/api/transactions?&userId=${userID}`)
-            return response.data.total;
-        } else {
+        // Fetch user details
+        const userResponse = await axios.get(`https://jsonmock.hackerrank.com/api/article_users?username=${username}`);
+        
+        if (userResponse.data.data.length === 0) {
             return "Username Not Found";
-        } 
-    } catch (error){
-        console.log(error);
+        }
+
+        const userID = userResponse.data.data[0].id;
+
+        // Fetch transactions
+        const transactionResponse = await axios.get(`https://jsonmock.hackerrank.com/api/transactions?userId=${userID}`);
+
+        return transactionResponse.data.total || 0;
+    } catch (error) {
+        console.error("Error fetching data:", error.message);
+        return "Error fetching data";
     }
 }
+
 async function main() {
     const ws = fs.createWriteStream(process.env.OUTPUT_PATH);
     const username = readLine().trim();
+    
     const result = await getNumTransactions(username);
-    ws.write(result.toString());
-}'use strict';
-
-const fs = require('fs');
-const https = require('https');
-
-process.stdin.resume();
-process.stdin.setEncoding('utf-8');
-
-let inputString = '';
-let currentLine = 0;
-
-process.stdin.on('data', function(inputStdin) {
-      inputString += inputStdin;
-});
-
-process.stdin.on('end', function() {
-    inputString = inputString.split('\n');
-    main();
-});
-
-function readLine() {
-      return inputString[currentLine++];
-}
-
-const axios =  require('axios');
-
-async function getNumTransactions(username) {
-    // write your code here
-    // API endpoint: https://jsonmock.hackerrank.com/api/article_users?username=<username>
-    // API endpoint: https://jsonmock.hackerrank.com/api/transactions?&userId=<userId>
-    try {
-        const {data} = await axios.get(`https://jsonmock.hackerrank.com/api/article_users?username=${username}`);
-        if(data.data && data.data.length !==0){
-            const userID = data.data[0].id;
-            const response = await axios.get(`https://jsonmock.hackerrank.com/api/transactions?&userId=${userID}`)
-            return response.data.total;
-        } else {
-            return "Username Not Found";
-        } 
-    } catch (error){
-        console.log(error);
-    }
-}
-async function main() {
-    const ws = fs.createWriteStream(process.env.OUTPUT_PATH);
-    const username = readLine().trim();
-    const result = await getNumTransactions(username);
-    ws.write(result.toString());
+    
+    ws.write(result.toString() + "\n");
+    ws.end();
 }
